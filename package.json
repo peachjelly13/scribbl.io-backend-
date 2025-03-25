@@ -1,4 +1,6 @@
 {
+  
+  "type": "module",
   "dependencies": {
     "express": "^4.21.2",
     "redis": "^4.7.0",

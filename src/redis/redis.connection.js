@@ -1,12 +1,22 @@
-import { createClient } from 'redis';
+import Redis from "ioredis";
 
-const client = createClient();
+const redis = new Redis({
+    host:'localhost',
+    port: 6379
+});
 
-client.on('error', err => console.log('Redis Client Error', err));
+redis.on("connect",()=>console.log("Connected To Redis!"));
+redis.on("error",(err)=>console.error("Redis Error:",err));
 
-async function connectRedis(){
-    await client.connect()
-    console.log("Connected to redis")
+export const testRedis = async()=>{
+    try {
+        await redis.set('testKey', 'Hello, Redis!');
+        const value = await redis.get('testKey');
+        console.log('Redis Connection Successful! Retrieved value:', value);
+    } catch (error) {
+        console.error('Redis Connection Failed:', error);
+    } finally {
+        redis.quit(); 
+    }
 }
-
-export {client,connectRedis}
+export default redis;

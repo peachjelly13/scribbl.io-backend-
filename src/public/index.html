@@ -3,23 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebSocket Client</title>
-    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <title>Skribbl Clone</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
-    <h1>WebSocket Test</h1>
+
+    <h1>Welcome to the Game!</h1>
     <p>Open the console (F12 > Console) to see WebSocket logs.</p>
+    <button id="joinBtn">Join Game</button>
 
     <script>
-        const socket = io('http://localhost:8000');  // Connect to your server
+        // Connect to the Socket.IO server
+        const socket = io("http://localhost:3000"); // Ensure this matches your backend
 
-        socket.on('connect', () => {
-            console.log('Connected to server:', socket.id);
+        // WebSocket connection logs
+        socket.on("connect", () => {
+            console.log("Connected to server:", socket.id);
         });
 
-        socket.on('disconnect', () => {
-            console.log('Disconnected from server');
+        socket.on("disconnect", () => {
+            console.log("Disconnected from server");
+        });
+
+        // Emit the 'connectUser' event when the user joins
+        function joinGame() {
+            const username = "JohnDoe"; // Replace with actual user input
+            const avatar = "profile.png"; // Replace with actual user input
+            const privateRoomId = null; // Or provide a room ID if applicable
+
+            socket.emit("connectUser", { username, avatar, privateRoomId });
+
+            // Listen for a response from the server
+            socket.on("joinedRoom", ({ roomId }) => {
+                console.log(`Joined room: ${roomId}`);
+            });
+
+            socket.on("playerJoined", ({ username }) => {
+                console.log(`${username} joined the room!`);
+            });
+        }
+
+        // Ensure the script runs after the DOM is fully loaded
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("joinBtn").addEventListener("click", joinGame);
         });
     </script>
+
 </body>
 </html>

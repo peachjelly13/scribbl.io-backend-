@@ -8,6 +8,7 @@ const server = http.createServer(app)
 const io = new Server(server)
 const PORT = 8000;
 app.use(express.static('public'));
+
 function socketConnection(){
     io.on('connection',(socket)=>{
     console.log('A client connected:', socket.id);

@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import redis from '../redis/redis.connection.js';
-import { findOrCreateRooms } from '../utils/findOrCreateRooms.js';
+import { findOrCreateRooms,generateUserId } from '../utils/generateIds.js';
+
 
 const userSocketMap = new Map(); // userId -> socketId maps the userId to their socket connection
 const socketUserMap = new Map(); // socketId -> userId which user holds which socket connection 
@@ -12,6 +13,7 @@ function setupSocket(server){
 
         socket.on("connectUser",async({username,avatar,privateRoomId})=>{
             let roomId = privateRoomId || findOrCreateRooms();
+            const userId = await generateUserId();
 
         })
 

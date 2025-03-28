@@ -1,11 +1,12 @@
 import redis from "../redis/redis.connection.js"
 import { nanoid } from "nanoid";
 
-function generateRandomRoomId(){
+export const generateRandomRoomId=()=>{
     return nanoid(6);
 }
 
-
-export const findOrCreateRooms = async()=>{
-
+export const generateUserId=()=>{
+    return `UID_${nanoid(8)}`
 }
+
+

@@ -13,19 +13,26 @@
     <button id="joinBtn">Join Game</button>
 
     <script>
-        // Connect to the Socket.IO server
         const socket = io("http://localhost:3000"); // Ensure this matches your backend
 
-        // WebSocket connection logs
+        // When connected
         socket.on("connect", () => {
             console.log("Connected to server:", socket.id);
+
+            // Try reconnecting using localStorage if user already has an ID
+            const storedUserId = localStorage.getItem("userId");
+            const storedRoomId = localStorage.getItem("roomId");
+
+            if (storedUserId && storedRoomId) {
+                console.log("Attempting to reconnect with stored userId and roomId...");
+                socket.emit("reconnectUser", { userId: storedUserId, roomId: storedRoomId });
+            }
         });
 
         socket.on("disconnect", () => {
             console.log("Disconnected from server");
         });
 
-        // Emit the 'connectUser' event when the user joins
         function joinGame() {
             const username = "JohnDoe"; // Replace with actual user input
             const avatar = "profile.png"; // Replace with actual user input
@@ -33,20 +40,21 @@
 
             socket.emit("connectUser", { username, avatar, privateRoomId });
 
-            // Listen for a response from the server
-            socket.on("joinedRoom", ({ roomId }) => {
+            // Listen for the roomJoined event
+            socket.on("roomJoined", ({ roomId, userId }) => {
                 console.log(`Joined room: ${roomId}`);
-            });
 
-            socket.on("playerJoined", ({ username }) => {
-                console.log(`${username} joined the room!`);
+                // Store userId and roomId in localStorage
+                localStorage.setItem("userId", userId);
+                localStorage.setItem("roomId", roomId);
             });
         }
 
-        // Ensure the script runs after the DOM is fully loaded
+        // Attach event listener after DOM loads
         document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("joinBtn").addEventListener("click", joinGame);
         });
+
     </script>
 
 </body>

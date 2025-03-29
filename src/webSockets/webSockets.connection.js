@@ -37,6 +37,9 @@ function setupSocket(server){
                 username
             });
             await redis.sadd(`room:${roomId}`,userId)
+            socket.join(roomId);
+            io.to(socket.id).emit("roomJoined",{roomId,userId,avatar,username});
+            console.log(`UserId ${userId} on the connection ${socket.id} joined room ${roomId}`)
 
 
         })

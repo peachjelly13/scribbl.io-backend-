@@ -40,9 +40,25 @@ function setupSocket(server){
             socket.join(roomId);
             io.to(socket.id).emit("roomJoined",{roomId,userId,avatar,username});
             console.log(`UserId ${userId} on the connection ${socket.id} joined room ${roomId}`)
+        });
 
+        socket.on("disconnect",async()=>{
+            const userId = socketUserMap.get(socket.id);
+            //user connected at a particular socket.id what user is at what socket.id
+            if(!userId){
+                return;
+            }
+            const userData = await redis.hgetall(`user:${userId}`);
+            if(userData?.roomId){
+                io.to(userData.roomId).emit("userDisconnect",{userId});
+                console.log(`User ${userId} disconnected from the room ${userData.roomId}`);
+                userSocketMap.delete(userId);
+                // remove this user from the map as we no longer have their connection
+                socketUserMap.delete(socket.id);
+                // remove the socket.id related to a particular user
 
-        })
+            }
+        });
 
     })
 

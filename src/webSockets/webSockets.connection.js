@@ -64,3 +64,6 @@ function setupSocket(server){
 
 
 }
+
+
+export {setupSocket}

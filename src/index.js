@@ -3,6 +3,7 @@ import {testRedis} from './redis/redis.connection.js';
 import http from 'http'
 import { Server } from 'socket.io';
 
+
 const app = express();
 const server = http.createServer(app)
 const io = new Server(server)
@@ -15,9 +16,8 @@ function socketConnection(){
 })}
 
 
-testRedis();
-server.listen(PORT,()=>{
-
+testRedis().then(()=>{server.listen(PORT,()=>{
     socketConnection();
     console.log(`App is listening on ${PORT}`)
-})
+})})
+

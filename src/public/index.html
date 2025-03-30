@@ -3,57 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skribbl Clone</title>
+    <title>WebSocket Room</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 400px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: blue;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: darkblue;
+        }
+        .messages {
+            margin-top: 20px;
+            text-align: left;
+        }
+    </style>
 </head>
 <body>
 
-    <h1>Welcome to the Game!</h1>
-    <p>Open the console (F12 > Console) to see WebSocket logs.</p>
-    <button id="joinBtn">Join Game</button>
+    <div class="container">
+        <h2>WebSocket Room</h2>
+        <div id="login">
+            <input type="text" id="username" placeholder="Enter Username">
+            <input type="text" id="privateRoomId" placeholder="Enter Private Room ID (optional)">
+            <button onclick="joinRoom()">Join Room</button>
+        </div>
+
+        <div id="chatroom" style="display: none;">
+            <p id="roomInfo"></p>
+            <ul id="messages"></ul>
+            <button onclick="leaveRoom()">Leave Room</button>
+        </div>
+    </div>
 
     <script>
-        const socket = io("http://localhost:3000"); // Ensure this matches your backend
+        let socket = null; // ✅ Don't connect immediately
 
-        // When connected
-        socket.on("connect", () => {
-            console.log("Connected to server:", socket.id);
-
-            // Try reconnecting using localStorage if user already has an ID
-            const storedUserId = localStorage.getItem("userId");
-            const storedRoomId = localStorage.getItem("roomId");
-
-            if (storedUserId && storedRoomId) {
-                console.log("Attempting to reconnect with stored userId and roomId...");
-                socket.emit("reconnectUser", { userId: storedUserId, roomId: storedRoomId });
+        function joinRoom() {
+            if (!socket) { 
+                socket = io("http://localhost:8000"); // ✅ Connect only when "Join Room" is clicked
             }
-        });
 
-        socket.on("disconnect", () => {
-            console.log("Disconnected from server");
-        });
+            const username = document.getElementById("username").value.trim();
+            const privateRoomId = document.getElementById("privateRoomId").value.trim() || null;
+            const avatar = "https://via.placeholder.com/50";
 
-        function joinGame() {
-            const username = "JohnDoe"; // Replace with actual user input
-            const avatar = "profile.png"; // Replace with actual user input
-            const privateRoomId = null; // Or provide a room ID if applicable
+            if (!username) {
+                alert("Please enter a username!");
+                return;
+            }
 
             socket.emit("connectUser", { username, avatar, privateRoomId });
 
-            // Listen for the roomJoined event
-            socket.on("roomJoined", ({ roomId, userId }) => {
-                console.log(`Joined room: ${roomId}`);
+            socket.on("roomJoined", (data) => {
+                localStorage.setItem("userId", data.userId);
+                localStorage.setItem("roomId", data.roomId);
 
-                // Store userId and roomId in localStorage
-                localStorage.setItem("userId", userId);
-                localStorage.setItem("roomId", roomId);
+                document.getElementById("roomInfo").innerText = `Connected to Room: ${data.roomId}`;
+                document.getElementById("login").style.display = "none";
+                document.getElementById("chatroom").style.display = "block";
+            });
+
+            socket.on("userDisconnect", ({ userId }) => {
+                const msgList = document.getElementById("messages");
+                const msg = document.createElement("li");
+                msg.innerText = `User ${userId} disconnected.`;
+                msgList.appendChild(msg);
+            });
+
+            socket.on("error", (error) => {
+                alert(error.message);
             });
         }
 
-        // Attach event listener after DOM loads
-        document.addEventListener("DOMContentLoaded", () => {
-            document.getElementById("joinBtn").addEventListener("click", joinGame);
-        });
+        function leaveRoom() {
+            if (socket) {
+                socket.disconnect(); // ✅ Properly disconnect the user
+                socket = null; // Reset the socket
+            }
+            localStorage.removeItem("userId");
+            localStorage.removeItem("roomId");
+            location.reload(); // Refresh to reset the UI
+        }
 
     </script>
 

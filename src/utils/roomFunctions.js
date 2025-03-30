@@ -1,4 +1,4 @@
-import redis from "../redis/redis.connection"
+import redis from "../redis/redis.connection.js"
 import { generateRandomRoomId } from "./generateIds.js";
 
 export const findOrCreateRoomsWithSpace =async()=>{

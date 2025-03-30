@@ -60,6 +60,24 @@ function setupSocket(server){
             }
         });
 
+        socket.on("reconnect",async({userId,roomId})=>{
+            const userData = await redis.hgetall(`user:${userId}`);
+            if(!userData || userData.roomId !== roomId){
+                socket.emit("error",{message:"Session expired or invalid userId or roomId"})
+            }
+            userSocketMap.set(userId,socket.id);
+            socketUserMap.set(socket.id,userId);
+            const isUserInRoom = await redis.sismember(`room:${roomId}`,userId);
+            if(!isUserInRoom){
+                socket.emit("error",{message:"No such user in the room"});
+                return;
+            }
+            socket.join(roomId);
+            io.to(roomId).emit("userConnected",{userId});
+            console.log(`User ${userId} reconnected to the room ${roomId}`)
+
+        })
+
     })
 
 

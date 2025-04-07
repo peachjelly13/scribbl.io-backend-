@@ -1,7 +1,8 @@
 import { Server } from 'socket.io';
 import redis from '../redis/redis.connection.js';
 import { generateUserId } from '../utils/generateIds.js';
-import { findOrCreateRoomsWithSpace } from '../utils/roomFunctions.js';
+import { findOrCreateRoomsWithSpace} from '../utils/roomFunctions.js';
+import { createPrivateRoom } from '../utils/roomFunctions.js';
 
 
 const userSocketMap = new Map(); // userId -> socketId maps the userId to their socket connection
@@ -12,10 +13,16 @@ function setupSocket(server){
     io.on("connection",async(socket)=>{
         console.log(`User connected ${socket.id}`);
 
-        socket.on("connectUser",async({username,avatar,privateRoomId})=>{
+        socket.on("connectUser",async({username,avatar,isPrivate,privateRoomId})=>{
             let roomId;
-            if(privateRoomId){
-                const privateRoomExists = await redis.sismember("activeRooms",privateRoomId);
+            const userId = await generateUserId();
+            if(isPrivate && !privateRoomId){
+                roomId = await createPrivateRoom();
+                await redis.set(`room:${roomId}:host`,userId);
+
+            }
+            else if(privateRoomId && isPrivate){
+                const privateRoomExists = await redis.sismember("privateRooms",privateRoomId);
                 if(!privateRoomExists){
                     socket.emit("error",{message:"Invalid private room Id"})
                     return;
@@ -27,7 +34,7 @@ function setupSocket(server){
             else{
                 roomId = await findOrCreateRoomsWithSpace();
             }
-            const userId = await generateUserId();
+            
             userSocketMap.set(userId,socket.id);
             socketUserMap.set(socket.id,userId)
 
@@ -36,7 +43,9 @@ function setupSocket(server){
                 avatar,
                 username
             });
-            await redis.sadd(`room:${roomId}`,userId)
+            const players = await redis.sadd(`room:${roomId}:players`,userId);
+            io.to(roomId).emit("updatedPlayerList",players)
+            
             socket.join(roomId);
             io.to(socket.id).emit("roomJoined",{roomId,userId,avatar,username});
             console.log(`UserId ${userId} on the connection ${socket.id} joined room ${roomId}`)

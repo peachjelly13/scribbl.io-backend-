@@ -13,5 +13,10 @@ export const findOrCreateRoomsWithSpace =async()=>{
     const newRoomId = await generateRandomRoomId();
     await redis.sadd("activeRooms", newRoomId);
     return newRoomId;
-  
+}
+
+export const createPrivateRoom = async()=>{
+    const newPrivateRoomId = await generateRandomRoomId();
+    await redis.sadd("privateRooms",newPrivateRoomId);
+    return newPrivateRoomId;
 }

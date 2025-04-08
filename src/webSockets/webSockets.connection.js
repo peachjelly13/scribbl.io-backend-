@@ -3,6 +3,7 @@ import redis from '../redis/redis.connection.js';
 import { generateUserId } from '../utils/generateIds.js';
 import { findOrCreateRoomsWithSpace} from '../utils/roomFunctions.js';
 import { createPrivateRoom } from '../utils/roomFunctions.js';
+import { gameSettings } from '../utils/gameSetting.js';
 
 
 const userSocketMap = new Map(); // userId -> socketId maps the userId to their socket connection
@@ -19,6 +20,7 @@ function setupSocket(server){
             if(isPrivate && !privateRoomId){
                 roomId = await createPrivateRoom();
                 await redis.set(`room:${roomId}:host`,userId);
+                await redis.hset(`room:${roomId}:settings`,gameSettings)
 
             }
             else if(privateRoomId && isPrivate){
@@ -32,7 +34,9 @@ function setupSocket(server){
                 }
             }
             else{
+                
                 roomId = await findOrCreateRoomsWithSpace();
+                await redis.set(`room:${roomId}:settings`,gameSettings)
             }
             
             userSocketMap.set(userId,socket.id);
@@ -85,7 +89,14 @@ function setupSocket(server){
             io.to(roomId).emit("userConnected",{userId});
             console.log(`User ${userId} reconnected to the room ${roomId}`)
 
-        })
+        });
+        // in case of a private room we give the option to start game
+        // so the frontend should send isPrivate True the moment user creates on private room
+        // when a user joins using a link they will see the option of play
+        // overbody else but the host will join using the link
+        // in case of a public room we will show enter button
+        // this is the general idea
+        socket.on("gameSettings",async({}))
 
     })
 

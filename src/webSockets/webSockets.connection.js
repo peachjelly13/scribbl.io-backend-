@@ -47,7 +47,8 @@ function setupSocket(server){
                 avatar,
                 username
             });
-            const players = await redis.sadd(`room:${roomId}:players`,userId);
+            await redis.sadd(`room:${roomId}:players`,userId);
+            const players = redis.smembers(`room:${roomId}:players`)
             io.to(roomId).emit("updatedPlayerList",players)
             
             socket.join(roomId);
@@ -96,7 +97,28 @@ function setupSocket(server){
         // overbody else but the host will join using the link
         // in case of a public room we will show enter button
         // this is the general idea
-        socket.on("gameSettings",async({}))
+        // here for the gamesettings I would need userId, roomId and settings
+        // we will get this because after we do a connect we get the socket will emit info
+        // on connection
+        socket.on("gameSettings",async({roomId,userId,settings,isPrivate})=>{
+            if(!roomId|| !settings){
+                socket.emit("error",{message:"No settings or roomId provided"});
+                return ;
+            }
+            if(isPrivate){
+            const hostId = await redis.get(`room:${roomId}:host`);
+            if(hostId!=userId){
+                socket.emit("error",{message:"Only the host allowed to edit"});
+                console.log(`Unauthorized settings update attempt by ${userId} in room ${roomId}`);
+                return ;
+            }}
+            if(settings.customWords && Array.isArray(settings.customWords)){
+                settings.customWords = JSON.stringify(settings.customWords);
+            }
+            await redis.hset(`room:${roomId}:settings`,settings);
+            io.to(roomId).emit("updatedSettings",settings);
+
+        });
 
     })
 

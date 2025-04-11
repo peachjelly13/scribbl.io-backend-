@@ -1,23 +1,17 @@
 import express from 'express'
 import {testRedis} from './redis/redis.connection.js';
 import http from 'http'
-import { Server } from 'socket.io';
+import { setupSocket } from './webSockets/webSockets.connection.js';
 
 
 const app = express();
 const server = http.createServer(app)
-const io = new Server(server)
 const PORT = 8000;
 app.use(express.static('public'));
 
-function socketConnection(){
-    io.on('connection',(socket)=>{
-    console.log('A client connected:', socket.id);
-})}
-
 
 testRedis().then(()=>{server.listen(PORT,()=>{
-    socketConnection();
+    setupSocket(server);
     console.log(`App is listening on ${PORT}`)
 })})
 

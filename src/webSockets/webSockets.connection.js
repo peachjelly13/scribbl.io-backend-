@@ -14,47 +14,56 @@ function setupSocket(server){
     io.on("connection",async(socket)=>{
         console.log(`User connected ${socket.id}`);
 
-        socket.on("connectUser",async({username,avatar,isPrivate,privateRoomId})=>{
-            let roomId;
-            const userId = await generateUserId();
-            if(isPrivate && !privateRoomId){
-                roomId = await createPrivateRoom();
-                await redis.set(`room:${roomId}:host`,userId);
-                await redis.hset(`room:${roomId}:settings`,gameSettings)
+       
+            socket.on("connectUser",async({username,avatar,isPrivate,privateRoomId})=>{
+                try {
+                    let roomId;
+                    const userId = await generateUserId();
+                    if(isPrivate && !privateRoomId){
+                        roomId = await createPrivateRoom();
+                        await redis.set(`room:${roomId}:host`,userId);
+                        await redis.hset(`room:${roomId}:settings`,gameSettings)
+                        await redis.sadd("privateRooms",roomId);
+        
+                    }
+                    else if(privateRoomId && isPrivate){
+                        const privateRoomExists = await redis.sismember("privateRooms",privateRoomId);
+                        if(!privateRoomExists){
+                            socket.emit("error",{message:"Invalid private room Id"})
+                            return;
+                        }
+                        else{
+                            roomId = privateRoomId;
+                        }
+                    }
+                    else{
+                        
+                        roomId = await findOrCreateRoomsWithSpace();
+                        await redis.set(`room:${roomId}:settings`,gameSettings)
+                    }
+                    
+                    userSocketMap.set(userId,socket.id);
+                    socketUserMap.set(socket.id,userId)
+        
+                    await redis.hset(`user:${userId}`,{
+                        roomId,
+                        avatar,
+                        username
+                    });
+                    await redis.sadd(`room:${roomId}:players`,userId);
+                    const players = await redis.smembers(`room:${roomId}:players`)
+                    socket.join(roomId);
+                    socket.emit("userConnected",{message:"The user has been connected"});
+                    io.to(socket.id).emit("roomJoined",{roomId,userId,avatar,username});
+                    io.to(roomId).emit("updatedPlayerList",players)
+                    console.log(`UserId ${userId} on the connection ${socket.id} joined room ${roomId}`)
+                } catch (error) {
+                    console.error("ConnectUser error",error);
+                    socket.emit("error",{message:"Something went wrong joining the room."})
 
-            }
-            else if(privateRoomId && isPrivate){
-                const privateRoomExists = await redis.sismember("privateRooms",privateRoomId);
-                if(!privateRoomExists){
-                    socket.emit("error",{message:"Invalid private room Id"})
-                    return;
                 }
-                else{
-                    roomId = privateRoomId;
-                }
-            }
-            else{
-                
-                roomId = await findOrCreateRoomsWithSpace();
-                await redis.set(`room:${roomId}:settings`,gameSettings)
-            }
-            
-            userSocketMap.set(userId,socket.id);
-            socketUserMap.set(socket.id,userId)
-
-            await redis.hset(`user:${userId}`,{
-                roomId,
-                avatar,
-                username
             });
-            await redis.sadd(`room:${roomId}:players`,userId);
-            const players = redis.smembers(`room:${roomId}:players`)
-            io.to(roomId).emit("updatedPlayerList",players)
-            
-            socket.join(roomId);
-            io.to(socket.id).emit("roomJoined",{roomId,userId,avatar,username});
-            console.log(`UserId ${userId} on the connection ${socket.id} joined room ${roomId}`)
-        });
+        
 
         socket.on("disconnect",async()=>{
             const userId = socketUserMap.get(socket.id);

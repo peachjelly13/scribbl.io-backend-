@@ -24,16 +24,25 @@ afterAll(() => {
   server.close();
 });
 
-test('should connect and emit connectUser', (done) => {
+test('should emit userConnected, roomJoined, and updatedPlayerList events after connectUser', (done) => {
+  clientSocket.once('userConnected',(data)=>{
+    expect(data).toHaveProperty('message','The user has been connected');
+  })
+  clientSocket.once('roomJoined',({roomId, userId, avatar, username})=>{
+    expect(roomId).toBeDefined();
+    expect(userId).toBeDefined();
+    expect(avatar).toBe('avatar.png'); 
+    expect(username).toBe('Timmy'); 
+  })
+  clientSocket.once('updatedPlayerList', (players) => {
+    expect(Array.isArray(players)).toBe(true); 
+    done(); 
+  });
+  
   clientSocket.emit('connectUser', {
     username: 'Timmy',
     avatar: 'avatar.png',
     isPrivate: false,
     privateRoomId: null
   });
-
-  setTimeout(() => {
-    expect(true).toBe(true);
-    done();
-  }, 100);
 });
